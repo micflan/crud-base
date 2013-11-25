@@ -13,9 +13,6 @@
         "laravelbook/ardent": "2.*"
     },
     "autoload": {
-        "classmap": [
-            "src/migrations"
-        ],
         "psr-0": {
             "Micflan\\CrudBase\\": "src/"
         }
