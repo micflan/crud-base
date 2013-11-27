@@ -101,7 +101,7 @@ class CrudBaseModel extends Ardent {
      * Prep Collection
      * Transforms objects to array and group if necessary
      */
-    public function prepCollection(array $array = null, $grouped = false) {
+    public function prepCollection(array $array = array(), $grouped = false) {
         if ($grouped) {
             if ($this->group) {
                 $array[$this->group][] = $this->toArray();
@@ -115,11 +115,5 @@ class CrudBaseModel extends Ardent {
         }
 
         return $array;
-    }
-
-    public function beforeSave() {
-        $this->company_id = Auth::user()->company_id;
-        $this->updated_by = Auth::user()->id;
-        if (!$this->created_by) $this->created_by = Auth::user()->id;
     }
 }

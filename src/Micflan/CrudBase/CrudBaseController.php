@@ -1,14 +1,20 @@
 <?php namespace Micflan\CrudBase;
 
 use \Input;
+use \App;
 use \Controller;
 use \Response;
+use \Route;
 
 class CrudBaseController extends Controller {
 
     protected $data = array();
+    protected $items;
 
-    public function __construct() {}
+    public function __construct() {
+        $route = explode('.', Route::currentRouteName());
+        $this->items = $this->items ?: App::make($route[0]);
+    }
 
     /**
      * Display a listing of the resource.
@@ -18,13 +24,12 @@ class CrudBaseController extends Controller {
     public function index() {
         // Pagination listens for ?page=n in the query string
         $per_page = Input::has('page') ? 20 : $this->items->prep()->count();
-        $result = $this->items->prep()->paginate($per_page);
+        $result   = $this->items->prep()->paginate($per_page);
 
         // Organise collection
         $data = [];
-        foreach ($result as $item) {
+        foreach ($result as $item)
             $data = $item->prepCollection($data, Input::has('grouped'));
-        }
 
         $result              = $result->toArray();
         $result['data']      = $data;
@@ -40,8 +45,9 @@ class CrudBaseController extends Controller {
      * @return Response
      */
     public function store() {
-        $obj = $this->items;
-        return $obj->fillValues()->save() ? ['success' => true, 'data' => $this->items->prep()->find($obj->id)->toArray()] : Response::json(['error' => true, 'validation_errors' => $obj->errors()->all()], 403);
+        return $this->items->fillValues()->save()
+                ? ['success' => true, 'data' => $this->items->prep()->find($this->items->id)->toArray()]
+                : Response::json(['error' => true, 'validation_errors' => $this->items->errors()->all()], 403);
     }
 
     /**
@@ -51,7 +57,9 @@ class CrudBaseController extends Controller {
      * @return Response
      */
     public function show($id) {
-        return ['data' => $this->items->prep()->find($id)];
+        return $this->items->prep()->find($id)
+                ? ['data' => $items]
+                : Response::json(['error' => true, 'message' => '404 Not Found'], 404);
     }
 
     /**
@@ -64,7 +72,9 @@ class CrudBaseController extends Controller {
         if (!$obj = $this->items->prep()->find($id))
             return Response::json(['error' => true, 'message' => '404 Not Found'], 404);
 
-        return $obj->fillValues()->save() ? ['success' => true, 'data' => $obj->toArray()] : Response::json(['error' => true, 'validation_errors' => $obj->errors()->all()], 403);
+        return $obj->fillValues()->save()
+                ? ['success' => true, 'data' => $obj->toArray()]
+                : Response::json(['error' => true, 'validation_errors' => $obj->errors()->all()], 403);
     }
 
     /**
