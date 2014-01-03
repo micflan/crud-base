@@ -5,15 +5,19 @@ use \App;
 use \Controller;
 use \Response;
 use \Route;
+use \Validator;
 
 class CrudBaseController extends Controller {
 
     protected $data = array();
     protected $items;
 
-    public function __construct() {
-        $route = explode('.', Route::currentRouteName());
-        $this->items = $this->items ?: App::make($route[0]);
+    public function __construct($name = null) {
+        if (!$name) {
+            $route = explode('.', Route::currentRouteName());
+            $name = $route[0];
+        }
+        $this->items = $this->items ?: App::make($name);
     }
 
     /**
@@ -45,9 +49,17 @@ class CrudBaseController extends Controller {
      * @return Response
      */
     public function store() {
-        return $this->items->fillValues()->save()
-                ? ['success' => true, 'data' => $this->items->prep()->find($this->items->id)->toArray()]
-                : Response::json(['error' => true, 'validation_errors' => $this->items->errors()->all()], 403);
+        // Validate
+        $validator = Validator::make($this->items->getInput(), $this->items->getRules());
+        if ($validator->fails()) {
+            return Response::json(['error' => true, 'validation_errors' => $validator->messages()->all()], 403);
+        }
+
+        // Save
+        $this->items->fillValues()->save();
+
+        // Return
+        return ['success' => true, 'data' => $this->items->prep()->find($this->items->id)->toArray()];
     }
 
     /**
@@ -57,8 +69,9 @@ class CrudBaseController extends Controller {
      * @return Response
      */
     public function show($id) {
-        return $this->items->prep()->find($id)
-                ? ['data' => $items]
+        $items = $this->items->prep()->find($id);
+        return $items
+                ? ['data' => $items->toArray()]
                 : Response::json(['error' => true, 'message' => '404 Not Found'], 404);
     }
 
@@ -72,9 +85,17 @@ class CrudBaseController extends Controller {
         if (!$obj = $this->items->prep()->find($id))
             return Response::json(['error' => true, 'message' => '404 Not Found'], 404);
 
-        return $obj->fillValues()->save()
-                ? ['success' => true, 'data' => $obj->toArray()]
-                : Response::json(['error' => true, 'validation_errors' => $obj->errors()->all()], 403);
+        // Validate
+        $validator = Validator::make($obj->getInput(), $obj->getRules());
+        if ($validator->fails()) {
+            return Response::json(['error' => true, 'validation_errors' => $validator->messages()->all()], 403);
+        }
+
+        // Save
+        $obj->fillValues()->save();
+
+        // Return
+        return ['success' => true, 'data' => $obj->toArray()];
     }
 
     /**

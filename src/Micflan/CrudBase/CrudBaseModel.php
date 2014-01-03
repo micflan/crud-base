@@ -3,24 +3,49 @@
 use \Auth;
 use \Input;
 use \Str;
-use \LaravelBook\Ardent\Ardent;
+use \Eloquent;
+use \Config;
 
-class CrudBaseModel extends Ardent {
+class CrudBaseModel extends Eloquent {
 
     private $input = array();
     protected $softDelete = true;
 
     public function __construct() {
-        $this->input = $this->input ?: Input::all();
-        $this->hidden = array_merge(['created_by', 'updated_by', 'created_at', 'updated_at', 'company_id', 'deleted_at'], (array)$this->hidden);
+        if (empty($this->input)) $this->setInput();
+
+        $hidden_fields = ['created_by', 'updated_by', 'created_at', 'updated_at', 'deleted_at'];
+        if (Config::get('crud-base::object.company.enabled')) $hidden_fields[] = Config::get('crud-base::object.company.join_field');
+        $this->hidden = array_merge($hidden_fields, (array)$this->hidden);
+
         parent::__construct();
     }
 
-    public function company() { return $this->belongsTo('Company'); }
+    public function company() {
+        if (Config::get('crud-base::object.company.enabled') and Config::get('crud-base::object.company.object_name') !== get_called_class()) {
+                return $this->belongsTo(Config::get('crud-base::object.company.object_name'));
+            }
+        }
+    }
 
-    public function setInput(array $input) {
+    public function setInput(array $input = null) {
+        if (!$input) $input = Input::all();
+        $this->input = [];
+        foreach (static::$rules as $key => $value) {
+            if (!empty($input[$key])) {
+                $this->input[$key] = $input[$key];
+            }
+        }
         $this->input = $input;
         return $this;
+    }
+
+    public function getInput() {
+        return $this->input;
+    }
+
+    public function getRules() {
+        return static::$rules;
     }
 
     /**
@@ -28,7 +53,15 @@ class CrudBaseModel extends Ardent {
      * Filter out inactive, expired or deleted objects
      */
     public function scopeActive($query) {
-        return $query->where('company_id','=',Auth::user()->company_id);
+        if (Config::get('crud-base::object.company.enabled')) {
+            if (Config::get('crud-base::object.company.object_name') === get_called_class()) {
+                $query->where('id', Auth::user()->{Config::get('crud-base::object.company.join_field')});
+            } else {
+                $query->where(Config::get('crud-base::object.company.join_field'), '=', Auth::user()->{Config::get('crud-base::object.company.join_field')});
+            }
+        }
+
+        return $query;
     }
 
     /**
@@ -76,6 +109,10 @@ class CrudBaseModel extends Ardent {
         $this->attributes['url_title'] = $url_title;
     }
 
+    /**
+     * Get model values from array
+     * Use model's validation $rules as keys
+     */
     public function fillValues(array $input = array()) {
         $input = $input ?: $this->input;
 

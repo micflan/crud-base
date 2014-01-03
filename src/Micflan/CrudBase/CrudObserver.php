@@ -1,12 +1,15 @@
 <?php namespace Micflan\CrudBase;
 
 use \Auth;
+use \Config;
 
 class CrudObserver
 {
     public function creating($item) {
         if (Auth::guest()) return false;
-        $item->company_id = Auth::user()->company_id;
+        if (Config::get('crud-base::object.company.enabled')) {
+            $item->{Config::get('crud-base::object.company.join_field')} = Auth::user()->{Config::get('crud-base::object.company.join_field')};
+        }
         $item->created_by = Auth::user()->id;
         $item->updated_by = Auth::user()->id;
     }

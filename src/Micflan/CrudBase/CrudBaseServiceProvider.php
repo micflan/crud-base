@@ -1,6 +1,7 @@
 <?php namespace Micflan\CrudBase;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Foundation\AliasLoader;
 
 class CrudBaseServiceProvider extends ServiceProvider {
 
@@ -19,6 +20,11 @@ class CrudBaseServiceProvider extends ServiceProvider {
 	public function boot()
 	{
 		$this->package('micflan/crud-base');
+
+        AliasLoader::getInstance()->alias('CBRouter', 'Micflan\CrudBase\CrudBaseRouter');
+        AliasLoader::getInstance()->alias('CBModel', 'Micflan\CrudBase\CrudBaseModel');
+        AliasLoader::getInstance()->alias('CBController', 'Micflan\CrudBase\CrudBaseController');
+        AliasLoader::getInstance()->alias('CBObserver', 'Micflan\CrudBase\CrudObserver');
 	}
 
 	/**
