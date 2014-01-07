@@ -5,6 +5,7 @@ use \Input;
 use \Str;
 use \Eloquent;
 use \Config;
+use \Request;
 
 class CrudBaseModel extends Eloquent {
 
@@ -69,8 +70,8 @@ class CrudBaseModel extends Eloquent {
      * Scope Order
      * Apply default ordering to collection
      */
-    public function scopeOrder($query) {
-        return $query->orderBy('url_title','asc');
+    public function scopeOrder($query, $order_by = 'url_title') {
+        return $query->orderBy($order_by,'asc');
     }
 
     /**
@@ -139,12 +140,12 @@ class CrudBaseModel extends Eloquent {
      * Prep Collection
      * Transforms objects to array and group if necessary
      */
-    public function prepCollection(array $array = array(), $grouped = false) {
+    public function prepCollection(array $array = array(), $grouped = false, $group_by = 'url_title') {
         if ($grouped) {
             if ($this->group) {
                 $array[$this->group][] = $this->toArray();
             } else {
-                $group = substr($this->url_title, 0, 1);
+                $group = substr($this->{$group_by}, 0, 1);
                 $group = is_numeric($group) ? '0 ... 9' : $group;
                 $array[strtoupper($group)][] = $this->toArray();
             }
@@ -153,5 +154,35 @@ class CrudBaseModel extends Eloquent {
         }
 
         return $array;
+    }
+
+    public function scopeBuildResult($query, array $options = array()) {
+        if (isset($options['page'])) {
+            $paginated = true;
+            $per_page = 20;
+            unset($options['page']);
+        } else {
+            $paginated = false;
+        }
+
+        $grouped = isset($options['grouped']);
+        $objects = $paginated ? $query->prep()->paginate($per_page) : $query->prep()->get();
+        $result = [
+            'data' => [],
+            'current_page' => trim(Request::url() . '?' . ($paginated ? 'page='.($objects->getCurrentPage()).'&' : '')
+                                                  . http_build_query($options), '?'),
+            'next_page' => trim(Request::url() . '?' . ($paginated ? 'page='.($objects->getCurrentPage()+1).'&' : '')
+                                               . http_build_query($options), '?'),
+        ];
+
+        // Organise collection
+        foreach ($objects as $item)
+            $result['data'] = $item->prepCollection($result['data'], $grouped);
+        ksort($result['data']);
+
+
+        return $paginated
+                ? array_merge($objects->toArray(), $result)
+                : $result;
     }
 }

@@ -27,20 +27,7 @@ class CrudBaseController extends Controller {
      */
     public function index() {
         // Pagination listens for ?page=n in the query string
-        $per_page = Input::has('page') ? 20 : $this->items->prep()->count();
-        $result   = $this->items->prep()->paginate($per_page);
-
-        // Organise collection
-        $data = [];
-        foreach ($result as $item)
-            $data = $item->prepCollection($data, Input::has('grouped'));
-
-        $result              = $result->toArray();
-        $result['data']      = $data;
-        $result['next_page'] = '?' . (Input::has('page') ? 'page='.($result['current_page']+1).'&' : '')
-                                   . http_build_query(Input::except(array('except' => 'page')));
-        ksort($result['data']);
-        return $result;
+        return $this->items->buildResult(Input::all());
     }
 
     /**
@@ -69,10 +56,8 @@ class CrudBaseController extends Controller {
      * @return Response
      */
     public function show($id) {
-        $items = $this->items->prep()->find($id);
-        return $items
-                ? ['data' => $items->toArray()]
-                : Response::json(['error' => true, 'message' => '404 Not Found'], 404);
+        $data = $this->items->where('id','=',$id)->buildResult();
+        return Response::json($data, count($data['data']) > 0 ? 200 : 404);
     }
 
     /**
