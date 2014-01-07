@@ -15,16 +15,17 @@ class CrudBaseModel extends Eloquent {
         if (empty($this->input)) $this->setInput();
 
         $hidden_fields = ['created_by', 'updated_by', 'created_at', 'updated_at', 'deleted_at'];
-        if (Config::get('crud-base::object.company.enabled')) $hidden_fields[] = Config::get('crud-base::object.company.join_field');
+        if ($parent = Config::get('crud-base::parent')) {
+            $hidden_fields[] = strtolower($parent.'_id');
+        }
         $this->hidden = array_merge($hidden_fields, (array)$this->hidden);
 
         parent::__construct();
     }
 
     public function company() {
-        if (Config::get('crud-base::object.company.enabled') and Config::get('crud-base::object.company.object_name') !== get_called_class()) {
-                return $this->belongsTo(Config::get('crud-base::object.company.object_name'));
-            }
+        if ($parent = Config::get('crud-base::parent') and $parent !== get_called_class()) {
+            return $this->belongsTo($parent);
         }
     }
 
@@ -53,11 +54,11 @@ class CrudBaseModel extends Eloquent {
      * Filter out inactive, expired or deleted objects
      */
     public function scopeActive($query) {
-        if (Config::get('crud-base::object.company.enabled')) {
-            if (Config::get('crud-base::object.company.object_name') === get_called_class()) {
-                $query->where('id', Auth::user()->{Config::get('crud-base::object.company.join_field')});
+        if ($parent = Config::get('crud-base::parent')) {
+            if ($parent !== get_called_class()) {
+                $query->where(strtolower($parent.'_id'), '=', Auth::user()->{strtolower($parent.'_id')});
             } else {
-                $query->where(Config::get('crud-base::object.company.join_field'), '=', Auth::user()->{Config::get('crud-base::object.company.join_field')});
+                $query->where('id', Auth::user()->{strtolower($parent.'_id')});
             }
         }
 
