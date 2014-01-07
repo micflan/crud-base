@@ -1,4 +1,4 @@
-# JSON flavoured CRUD Base for Laravel 4 and Ardent
+# JSON flavoured CRUD Base for Laravel 4
 
 Simply extend the provided CrudBaseModel and CrudBaseController to effortlessly create a basic JSON CRUD API.
 
