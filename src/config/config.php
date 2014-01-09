@@ -16,6 +16,9 @@ return array(
     |
     */
 
-    'parent' => 'Company',
+    'parent' => 'NameSpace\Model',
+    'parent_join_field' => 'company_id',
+
+    'namespace' => false,
 
 );

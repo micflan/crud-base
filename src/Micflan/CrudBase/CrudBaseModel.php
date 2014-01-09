@@ -57,9 +57,9 @@ class CrudBaseModel extends Eloquent {
     public function scopeActive($query) {
         if ($parent = Config::get('crud-base::parent')) {
             if ($parent !== get_called_class()) {
-                $query->where(strtolower($parent.'_id'), '=', Auth::user()->{strtolower($parent.'_id')});
+                $query->where(Config::get('crud-base::parent_join_field'), '=', Auth::user()->{Config::get('crud-base::parent_join_field')});
             } else {
-                $query->where('id', Auth::user()->{strtolower($parent.'_id')});
+                $query->where('id', Auth::user()->{Config::get('crud-base::parent_join_field')});
             }
         }
 
@@ -75,8 +75,8 @@ class CrudBaseModel extends Eloquent {
     }
 
     /**
-     * Scope Pre-Fetch
-     * Perform common collection filters
+     * Scope Order By Input
+     * Order objects by values in the input array
      */
     public function scopeOrderByInput($query) {
         if ($order_by = array_pull($this->input, 'order_by') and key_exists($order_by, static::$rules)) {
@@ -87,11 +87,33 @@ class CrudBaseModel extends Eloquent {
     }
 
     /**
-     * Scope Pre-Fetch
+     * Scope Prep
      * Perform common collection filters
      */
     public function scopePrep($query) {
         return $query->orderByInput()->order()->active();
+    }
+
+    /**
+     * Set title Attribute
+     * Set title and url_title, if necessary
+     */
+    public function setTitleAttribute($value) {
+        if (isset($this->getRules()['url_title']) and empty($this->attributes['url_title'])) {
+            $this->attributes['url_title'] = $value;
+        }
+        $this->attributes['title'] = $value;
+    }
+
+    /**
+     * Set name Attribute
+     * Set name and url_title, if necessary
+     */
+    public function setNameAttribute($value) {
+        if (isset($this->getRules()['url_title']) and empty($this->attributes['url_title'])) {
+            $this->attributes['url_title'] = $value;
+        }
+        $this->attributes['name'] = $value;
     }
 
     /**
@@ -132,7 +154,10 @@ class CrudBaseModel extends Eloquent {
      * Transform object to array
      */
     public function toArray() {
-        $array = parent::toArray();
+        $array = ['id' => $this->id];
+        foreach(static::$rules as $key => $value) {
+            $array[$key] = $this->{$key};
+        }
         return $array;
     }
 
@@ -170,9 +195,9 @@ class CrudBaseModel extends Eloquent {
         $result = [
             'data' => [],
             'current_page' => trim(Request::url() . '?' . ($paginated ? 'page='.($objects->getCurrentPage()).'&' : '')
-                                                  . http_build_query($options), '?'),
+                                                  . http_build_query($options), '?&'),
             'next_page' => trim(Request::url() . '?' . ($paginated ? 'page='.($objects->getCurrentPage()+1).'&' : '')
-                                               . http_build_query($options), '?'),
+                                               . http_build_query($options), '?&'),
         ];
 
         // Organise collection

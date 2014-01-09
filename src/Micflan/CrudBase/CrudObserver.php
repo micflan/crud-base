@@ -10,7 +10,9 @@ class CrudObserver
 
         if ($parent = Config::get('crud-base::parent')) {
             $parent_id = strtolower($parent.'_id');
-            $item->{$parent_id} = Auth::user()->{$parent_id};
+            if (isset($item->parent_id)) {
+                $item->{$parent_id} = Auth::user()->{$parent_id};
+            }
         }
 
         $item->created_by = Auth::user()->id;

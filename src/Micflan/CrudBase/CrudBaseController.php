@@ -12,12 +12,8 @@ class CrudBaseController extends Controller {
     protected $data = array();
     protected $items;
 
-    public function __construct($name = null) {
-        if (!$name) {
-            $route = explode('.', Route::currentRouteName());
-            $name = $route[0];
-        }
-        $this->items = $this->items ?: App::make($name);
+    public function __construct(CrudBaseModel $items) {
+        $this->items = $items;
     }
 
     /**
@@ -36,14 +32,18 @@ class CrudBaseController extends Controller {
      * @return Response
      */
     public function store() {
+
+        // Fill values from input
+        $obj = $this->items->fillValues();
+
         // Validate
-        $validator = Validator::make($this->items->getInput(), $this->items->getRules());
+        $validator = Validator::make($obj->toArray(), $obj->getRules());
         if ($validator->fails()) {
             return Response::json(['error' => true, 'validation_errors' => $validator->messages()->all()], 403);
         }
 
         // Save
-        $this->items->fillValues()->save();
+        $obj->save();
 
         // Return
         return ['success' => true, 'data' => $this->items->prep()->find($this->items->id)->toArray()];
